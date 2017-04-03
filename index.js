@@ -19,7 +19,7 @@ function fetchJson(url, method = 'GET') {
 
       return response.json().then((json) => {
         // do default stuff to handle error here
-        return Promise.reject(Object.assign(json, { response }));
+        return Promise.reject({json: json, response: response});
       });
     });
 }
