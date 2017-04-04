@@ -1,8 +1,8 @@
 <?php
 
-function respond($code = 200, $payload = [])
+function respond($code = 200, $payload = [], $contentType = 'application/json')
 {
-    header('Content-Type: application/json');
+    header("Content-Type: $contentType");
 
     if (!empty($payload)) {
         echo json_encode($payload);

@@ -7,8 +7,8 @@ function headers() {
   });
 }
 
-function fetchJson(url, method = 'GET') {
-  function isJson(str) {
+class Fetch {
+  static isJson(str) {
     try {
       JSON.parse(str);
     } catch (e) {
@@ -17,48 +17,56 @@ function fetchJson(url, method = 'GET') {
     return true;
   }
 
-  return fetch(url, { method: method, headers: headers() })
-    .then((response) => {
-      const contentType = response.headers.get('Content-Type');
+  static json(url, method = 'GET') {
+    return fetch(url, { method: method, headers: headers() })
+      .then((response) => {
+        const contentType = response.headers.get('Content-Type');
 
-      if (contentType && contentType.indexOf('application/json') < 0) {
-        throw new TypeError('Response content-type is not application/json');
-      }
+        if (contentType && contentType.indexOf('application/json') < 0) {
+          throw new TypeError('Response content-type is not application/json');
+        }
 
-      if (response.ok) {
+        if (response.ok) {
+          return response.text().then((text) => {
+            response.json = Fetch.isJson(text) ? JSON.parse(text) : null;
+            return Promise.resolve(response);
+          });
+        }
+
         return response.text().then((text) => {
-          response.json = isJson(text) ? JSON.parse(text) : null;
-          return Promise.resolve(response);
+          response.json = Fetch.isJson(text) ? JSON.parse(text) : null;
+          return Promise.reject(response);
         });
-      }
+      }).catch((error) => {
+        if (typeof error !== 'object') {
+          console.error(error);
+        }
 
-      return response.text().then((text) => {
-        response.json = isJson(text) ? JSON.parse(text) : null;
-        return Promise.reject(response);
+        return Promise.reject(error);
       });
-    });
+  }
 }
 
-fetchJson(`${endpoint}?code=200`, 'POST').then((payload) => {
+Fetch.json(`${endpoint}?code=200`, 'POST').then((payload) => {
   console.log(payload);
 }).catch((payload) => {
   console.log(payload);
 });
 
-fetchJson(`${endpoint}?code=200_noJson`, 'POST').then((payload) => {
+Fetch.json(`${endpoint}?code=200_noJson`, 'POST').then((payload) => {
   console.log(payload);
 }).catch((payload) => {
   console.log(payload);
 });
 
-fetchJson(`${endpoint}?code=500`).catch((response) => {
+Fetch.json(`${endpoint}?code=500`).catch((response) => {
   console.log(response);
 });
 
-fetchJson(`${endpoint}?code=500_noJson`).catch((response) => {
+Fetch.json(`${endpoint}?code=500_noJson`).catch((response) => {
   console.log(response);
 });
 
-fetchJson(`${endpoint}?code=422`).catch((response) => {
+Fetch.json(`${endpoint}?code=422`).catch((response) => {
   console.log(response);
 });
