@@ -10,7 +10,7 @@ class Fetch {
     return true;
   }
 
-  static json(url, options = { method: 'GET', headers: { 'Content-Type': 'application/json' }, onSuccess: false, onFail: false }) {
+  static json(url, options = { method: 'GET', headers: { 'Content-Type': 'application/json' } }) {
     return fetch(url, {
       method: options.method ? options.method : 'GET',
       headers: new Headers(options.headers ? options.headers : { 'Content-Type': 'application/json' })
@@ -25,10 +25,6 @@ class Fetch {
         if (response.ok) {
           return response.text().then((text) => {
             response.json = Fetch.isJson(text) ? JSON.parse(text) : null;
-
-            if (typeof options.onSuccess === 'function') {
-              options.onSuccess(response);
-            }
 
             return Promise.resolve(response);
           });
@@ -56,10 +52,7 @@ class Fetch {
 
 
 Fetch.json(`${endpoint}?code=200`, {
-  method: 'POST',
-  onSuccess: (response) => {
-    console.log(response.status);
-  }
+  method: 'POST'
 }).then((payload) => {
   console.log(payload);
 }).catch((payload) => {
@@ -74,12 +67,7 @@ Fetch.json(`${endpoint}?code=200_noJson`, {
   console.log(payload);
 });
 
-Fetch.json(`${endpoint}?code=500`, {
-  onFail: (response) => {
-    console.log(response.status);
-    console.log('default fail');
-  }
-}).catch((response) => {
+Fetch.json(`${endpoint}?code=500`).catch((response) => {
   console.log(response);
 });
 
@@ -90,3 +78,23 @@ Fetch.json(`${endpoint}?code=500_noJson`).catch((response) => {
 Fetch.json(`${endpoint}?code=422`).catch((response) => {
   console.log(response);
 });
+
+function testChain() {
+  return Fetch.json(`${endpoint}?code=200`, {
+    method: 'POST'
+  }).then((payload) => {
+    return Promise.resolve(payload);
+  }).catch((payload) => {
+    return Promise.reject(payload);
+  });
+}
+
+testChain()
+  .then((payload) => {
+    console.log(payload);
+    console.log('chain worked!');
+  })
+  .catch((error) => {
+    console.log(error);
+    console.log('error chain worked!');
+  });
