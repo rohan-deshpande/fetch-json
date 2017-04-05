@@ -1,4 +1,10 @@
 const endpoint = 'server.php';
+const DEFAULT_METHOD = 'GET';
+const DEFAULT_HEADERS = {
+  'Accept': 'application/json',
+  'Content-Type': 'application/json',
+};
+const DEFAULT_BODY = null;
 
 class Fetch {
   static isJson(str) {
@@ -10,16 +16,17 @@ class Fetch {
     return true;
   }
 
-  static json(url, options = { method: 'GET', headers: { 'Content-Type': 'application/json' } }) {
+  static json(url, options = { method: DEFAULT_METHOD, headers: DEFAULT_HEADERS, body: DEFAULT_BODY }) {
     return fetch(url, {
-      method: options.method ? options.method : 'GET',
-      headers: new Headers(options.headers ? options.headers : { 'Content-Type': 'application/json' })
+      method: options.method ? options.method : DEFAULT_METHOD,
+      headers: new Headers(options.headers ? options.headers : DEFAULT_HEADERS),
+      body: options.body ? JSON.stringify(options.body) : DEFAULT_BODY,
     })
       .then((response) => {
         const contentType = response.headers.get('Content-Type');
 
         if (contentType && contentType.indexOf('application/json') < 0) {
-          throw new TypeError('Response content-type is not application/json');
+          throw new TypeError('Content-Type of response is not application/json');
         }
 
         if (response.ok) {
@@ -32,10 +39,6 @@ class Fetch {
 
         return response.text().then((text) => {
           response.json = Fetch.isJson(text) ? JSON.parse(text) : null;
-
-          if (typeof options.onFail === 'function') {
-            options.onFail(response);
-          }
 
           return Promise.reject(response);
         });
@@ -79,17 +82,20 @@ Fetch.json(`${endpoint}?code=422`).catch((response) => {
   console.log(response);
 });
 
-function testChain() {
-  return Fetch.json(`${endpoint}?code=200`, {
-    method: 'POST'
+function testChain(endpoint) {
+  return Fetch.json(endpoint, {
+    method: 'POST',
+    body: {'some': 'thing'}
   }).then((payload) => {
+    console.log('do some default stuff before resolving a promise');
     return Promise.resolve(payload);
   }).catch((payload) => {
+    console.log('do some default stuff before rejecting a promise');
     return Promise.reject(payload);
   });
 }
 
-testChain()
+testChain(`${endpoint}?code=200`)
   .then((payload) => {
     console.log(payload);
     console.log('chain worked!');
@@ -97,4 +103,14 @@ testChain()
   .catch((error) => {
     console.log(error);
     console.log('error chain worked!');
+  });
+
+testChain(`${endpoint}?code=200`)
+  .then((payload) => {
+    console.log(payload);
+    console.log('run custom success code');
+  })
+  .catch((error) => {
+    console.log(error);
+    console.log('run custom fail code');
   });
