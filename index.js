@@ -1,12 +1,5 @@
 const endpoint = 'server.php';
 
-function headers() {
-  return new Headers({
-    'Content-Type': 'application/json',
-    'Authorization': '',
-  });
-}
-
 class Fetch {
   static isJson(str) {
     try {
@@ -17,8 +10,11 @@ class Fetch {
     return true;
   }
 
-  static json(url, method = 'GET') {
-    return fetch(url, { method: method, headers: headers() })
+  static json(url, options = { method: 'GET', headers: { 'Content-Type': 'application/json' }, onSuccess: false, onFail: false }) {
+    return fetch(url, {
+      method: options.method ? options.method : 'GET',
+      headers: new Headers(options.headers ? options.headers : { 'Content-Type': 'application/json' })
+    })
       .then((response) => {
         const contentType = response.headers.get('Content-Type');
 
@@ -29,15 +25,26 @@ class Fetch {
         if (response.ok) {
           return response.text().then((text) => {
             response.json = Fetch.isJson(text) ? JSON.parse(text) : null;
+
+            if (typeof options.onSuccess === 'function') {
+              options.onSuccess(response);
+            }
+
             return Promise.resolve(response);
           });
         }
 
         return response.text().then((text) => {
           response.json = Fetch.isJson(text) ? JSON.parse(text) : null;
+
+          if (typeof options.onFail === 'function') {
+            options.onFail(response);
+          }
+
           return Promise.reject(response);
         });
-      }).catch((error) => {
+      })
+      .catch((error) => {
         if (typeof error !== 'object') {
           console.error(error);
         }
@@ -47,19 +54,32 @@ class Fetch {
   }
 }
 
-Fetch.json(`${endpoint}?code=200`, 'POST').then((payload) => {
+
+Fetch.json(`${endpoint}?code=200`, {
+  method: 'POST',
+  onSuccess: (response) => {
+    console.log(response.status);
+  }
+}).then((payload) => {
   console.log(payload);
 }).catch((payload) => {
   console.log(payload);
 });
 
-Fetch.json(`${endpoint}?code=200_noJson`, 'POST').then((payload) => {
+Fetch.json(`${endpoint}?code=200_noJson`, {
+  method: 'POST'
+}).then((payload) => {
   console.log(payload);
 }).catch((payload) => {
   console.log(payload);
 });
 
-Fetch.json(`${endpoint}?code=500`).catch((response) => {
+Fetch.json(`${endpoint}?code=500`, {
+  onFail: (response) => {
+    console.log(response.status);
+    console.log('default fail');
+  }
+}).catch((response) => {
   console.log(response);
 });
 
